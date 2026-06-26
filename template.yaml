@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Counter API - stores a count and last updated timestamp in DynamoDB
+Description: Burger API - tracks burger contributions per user in DynamoDB
 
 Globals:
   Function:
@@ -9,25 +9,25 @@ Globals:
     MemorySize: 256
     Environment:
       Variables:
-        TABLE_NAME: !Ref CounterTable
+        TABLE_NAME: !Ref BurgerTable
     Layers:
-      - !Ref DepsLayer
+      - !Ref BurgerDepsLayer
   Api:
     Auth:
       ApiKeyRequired: false
 
 Resources:
-  DepsLayer:
+  BurgerDepsLayer:
     Type: AWS::Serverless::LayerVersion
     Properties:
-      LayerName: counter-api-deps
+      LayerName: burger-api-deps
       ContentUri: layer/
       CompatibleRuntimes:
         - python3.12
     Metadata:
       BuildMethod: python3.12
 
-  CounterTable:
+  BurgerTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: burger-counter
@@ -39,31 +39,31 @@ Resources:
         - AttributeName: id
           KeyType: HASH
 
-  GetCounterFunction:
+  GetBurgerFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/
       Handler: handlers.counter.get_handler
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref CounterTable
+            TableName: !Ref BurgerTable
       Events:
-        GetCounter:
+        GetBurger:
           Type: Api
           Properties:
             Path: /burger
             Method: get
 
-  IncrementCounterFunction:
+  AddBurgerFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/
       Handler: handlers.counter.increment_handler
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref CounterTable
+            TableName: !Ref BurgerTable
       Events:
-        IncrementCounter:
+        AddBurger:
           Type: Api
           Properties:
             Path: /burger
@@ -71,7 +71,7 @@ Resources:
             Auth:
               ApiKeyRequired: true
 
-  ApiKey:
+  BurgerApiKey:
     Type: AWS::ApiGateway::ApiKey
     DependsOn: ServerlessRestApiProdStage
     Properties:
@@ -80,7 +80,7 @@ Resources:
         - RestApiId: !Ref ServerlessRestApi
           StageName: Prod
 
-  UsagePlan:
+  BurgerUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
     DependsOn: ServerlessRestApiProdStage
     Properties:
@@ -88,20 +88,20 @@ Resources:
         - ApiId: !Ref ServerlessRestApi
           Stage: Prod
 
-  UsagePlanKey:
+  BurgerUsagePlanKey:
     Type: AWS::ApiGateway::UsagePlanKey
     Properties:
-      KeyId: !Ref ApiKey
+      KeyId: !Ref BurgerApiKey
       KeyType: API_KEY
-      UsagePlanId: !Ref UsagePlan
+      UsagePlanId: !Ref BurgerUsagePlan
 
 Outputs:
   ApiUrl:
     Description: API Gateway endpoint URL
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
-  CounterTableName:
+  BurgerTableName:
     Description: DynamoDB table name
-    Value: !Ref CounterTable
-  ApiKeyId:
+    Value: !Ref BurgerTable
+  BurgerApiKeyId:
     Description: API Key ID (look up the value in API Gateway console)
-    Value: !Ref ApiKey
+    Value: !Ref BurgerApiKey
