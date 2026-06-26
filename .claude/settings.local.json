@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m venv .venv)",
+      "Bash(.venv/bin/pip install *)",
+      "Bash(.venv/bin/pytest tests/ -v)",
+      "Read(//var/run/**)",
+      "Read(//Users/sarahcrowder/.docker/run/**)"
+    ]
+  }
+}

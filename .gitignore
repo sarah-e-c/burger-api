@@ -1,0 +1,13 @@
+.aws-sam/
+env.json
+__pycache__/
+*.pyc
+*.pyo
+.env
+.venv/
+venv/
+*.egg-info/
+dist/
+.pytest_cache/
+.coverage
+htmlcov/

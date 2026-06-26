@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Counter API - stores a count and last updated timestamp in DynamoDB
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 10
+    MemorySize: 256
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref CounterTable
+    Layers:
+      - !Ref DepsLayer
+  Api:
+    Auth:
+      ApiKeyRequired: false
+
+Resources:
+  DepsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: counter-api-deps
+      ContentUri: layer/
+      CompatibleRuntimes:
+        - python3.12
+    Metadata:
+      BuildMethod: python3.12
+
+  CounterTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: burger-counter
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+
+  GetCounterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers.counter.get_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref CounterTable
+      Events:
+        GetCounter:
+          Type: Api
+          Properties:
+            Path: /burger
+            Method: get
+
+  IncrementCounterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: handlers.counter.increment_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CounterTable
+      Events:
+        IncrementCounter:
+          Type: Api
+          Properties:
+            Path: /burger
+            Method: post
+            Auth:
+              ApiKeyRequired: true
+
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    DependsOn: ServerlessRestApiProdStage
+    Properties:
+      Enabled: true
+      StageKeys:
+        - RestApiId: !Ref ServerlessRestApi
+          StageName: Prod
+
+  UsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn: ServerlessRestApiProdStage
+    Properties:
+      ApiStages:
+        - ApiId: !Ref ServerlessRestApi
+          Stage: Prod
+
+  UsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref UsagePlan
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+  CounterTableName:
+    Description: DynamoDB table name
+    Value: !Ref CounterTable
+  ApiKeyId:
+    Description: API Key ID (look up the value in API Gateway console)
+    Value: !Ref ApiKey
